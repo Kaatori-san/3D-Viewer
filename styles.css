@@ -53,3 +53,196 @@ body {
             height: 100% !important;
             outline: none;
         }
+
+/* The app fills the visible viewport, including browser chrome and the keyboard. */
+:root {
+    --app-height: 100vh;
+    --app-top: 0px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --dock-height: calc(68px + var(--safe-bottom));
+}
+@supports (height: 100dvh) { :root { --app-height: 100dvh; } }
+* { box-sizing: border-box; }
+html { height: 100%; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+body {
+    position: fixed; top: var(--app-top); left: 0; right: 0;
+    width: 100%; height: var(--app-height); min-height: 0; margin: 0;
+    display: flex; flex-direction: row; overscroll-behavior: none;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+[hidden], .hidden { display: none !important; }
+.mobile-only { display: none; }
+button, a, label, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, a, label { touch-action: manipulation; }
+button:disabled { opacity: .55; cursor: wait; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid #7dd3fc; outline-offset: 3px;
+}
+input, textarea { user-select: text; -webkit-user-select: text; }
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+#sidebar {
+    width: 360px; height: 100%; max-height: none; min-height: 0;
+    padding-top: var(--safe-top); padding-left: var(--safe-left);
+    background: #0f172a; display: flex; flex-direction: column; flex-shrink: 0;
+}
+#sidebarHeader { flex-shrink: 0; gap: 8px; padding: 16px; }
+#sidebarHeader > div { min-width: 0; }
+#sidebarHeader p { font-size: 10px; }
+#openCodeModalBtn { flex-shrink: 0; min-height: 44px; }
+#sidebarScroll {
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(24px + var(--safe-bottom)); scroll-padding: 16px;
+}
+#sidebarScroll > div { scroll-margin-top: 16px; }
+#modelListContainer, #savedModelListContainer { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+#statModelName, #statDimensions { text-align: right; overflow-wrap: anywhere; min-width: 0; }
+#specsSection .flex { gap: 12px; }
+#specsSection .flex > :first-child { flex-shrink: 0; }
+#specsSection .flex:last-child { flex-wrap: wrap; }
+#viewportMain { height: 100%; min-height: 0; min-width: 0; width: auto; flex: 1; }
+#canvas-container { width: 100%; height: 100%; touch-action: none; }
+#canvas-container canvas { touch-action: none; -webkit-user-select: none; user-select: none; }
+#hudBadge { max-width: calc(100% - 385px); top: calc(16px + var(--safe-top)); }
+#hudBadge > div, #hudBadge > div > div { min-width: 0; }
+#hudStorageDot { flex-shrink: 0; }
+#hudModelTitle, #hudModelDesc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#viewportActions { top: calc(16px + var(--safe-top)); right: calc(16px + var(--safe-right)); }
+#viewportActions button { min-height: 44px; white-space: nowrap; }
+#desktopGestureHint { white-space: nowrap; bottom: calc(16px + var(--safe-bottom)); }
+#touchGestureHint { display: none; }
+#toastBanner {
+    z-index: 80; max-width: min(460px, calc(100% - 32px)); overflow-wrap: anywhere;
+    right: calc(16px + var(--safe-right)); bottom: calc(20px + var(--safe-bottom));
+    pointer-events: none;
+}
+#stlModal, #actionModal, #downloadModal {
+    position: fixed; top: var(--app-top); bottom: auto; left: 0; right: 0;
+    height: var(--app-height); z-index: 60; display: flex; align-items: center; justify-content: center;
+    padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+    background: rgba(0, 0, 0, .75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+#stlModal > div, #actionModal > div, .download-card {
+    max-height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+#stlModal > div > :first-child, #stlModal > div > :last-child,
+#actionModal > div > :first-child, #actionModal > div > :last-child { flex-shrink: 0; }
+#stlModal > div > :nth-child(2), #actionModal > div > :nth-child(2) {
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+#stlModal button, #actionModal button, .download-card button, #saveFileLink { min-height: 44px; }
+#closeModalBtn, #closeActionModalBtn { min-width: 44px; flex-shrink: 0; }
+.download-card { width: 100%; max-width: 420px; padding: 20px; gap: 16px; background: #0f172a; border: 1px solid #334155; border-radius: 20px; overflow-y: auto; }
+.download-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.download-heading h2 { font-size: 18px; font-weight: 700; }
+.download-heading button { width: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: #1e293b; }
+#downloadFilename { color: #cbd5e1; overflow-wrap: anywhere; font-size: 14px; }
+#saveFileLink, #shareFileBtn { display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px; border-radius: 12px; text-decoration: none; font-size: 15px; font-weight: 600; }
+#saveFileLink { background: #38bdf8; color: #082f49; }
+#shareFileBtn { background: #1e293b; color: #e2e8f0; border: 1px solid #475569; }
+.download-help { font-size: 12px; line-height: 1.6; color: #94a3b8; }
+input[type=range] { height: 36px; margin: 0; touch-action: pan-y; }
+input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: #334155; }
+input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border: 0; border-radius: 50%; background: #38bdf8; }
+
+@media (max-width: 1023px), (any-pointer: coarse) {
+    button, #saveFileLink, label:has(input[type=file]) { min-height: 44px; }
+    button { min-width: 44px; }
+    input[type=text], input[type=search], textarea, select { font-size: 16px !important; }
+    input[type=text], input[type=search], select { min-height: 46px; }
+    #customStlTextarea { line-height: 1.5; }
+    #materialColors { flex-wrap: wrap; }
+    #colorSwatches { flex-basis: 100%; gap: 4px; justify-content: space-between; }
+    #colorSwatches button { width: 44px; height: 44px; flex-shrink: 0; }
+    #materialColors > :last-child { margin-left: auto; min-height: 44px; }
+    #customColorPicker { width: 32px; height: 32px; }
+    input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -9px; }
+    #desktopGestureHint { display: none; }
+    #touchGestureHint {
+        display: block; position: absolute; left: 12px; right: 12px; bottom: calc(16px + var(--safe-bottom));
+        margin: 0; text-align: center; color: #94a3b8; font-size: 11px; line-height: 1.6; pointer-events: none;
+    }
+}
+
+@media (max-width: 1023px) {
+    body { flex-direction: column; }
+    .mobile-only { display: flex; }
+    #mobileHeader {
+        flex-shrink: 0; min-height: calc(60px + var(--safe-top)); padding: calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) 8px calc(16px + var(--safe-left));
+        align-items: center; justify-content: space-between; gap: 12px; background: #0f172a; border-bottom: 1px solid #1e293b;
+    }
+    #mobileHeader strong { display: block; font-size: 15px; line-height: 1.4; letter-spacing: -.02em; }
+    #mobileHeader span { display: block; font-size: 11px; color: #94a3b8; }
+    #mobileMenuBtn, #closeSidebarBtn { width: 44px; height: 44px; border-radius: 12px; background: #1e293b; color: #e2e8f0; align-items: center; justify-content: center; }
+    #mobileMenuBtn { display: flex; }
+    #viewportMain { width: 100%; height: auto; flex: 1 1 0; }
+    #mobileDock {
+        flex-shrink: 0; height: var(--dock-height); padding: 6px calc(12px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(12px + var(--safe-left));
+        gap: 8px; background: #0f172a; border-top: 1px solid #26354a; z-index: 25;
+    }
+    #mobileDock button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #cbd5e1; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    #mobileDock button:first-child { background: #102e43; color: #7dd3fc; }
+    #sidebarBackdrop { display: block; position: fixed; inset: 0; z-index: 30; background: rgba(2, 6, 23, .65); }
+    #sidebar {
+        position: fixed; z-index: 40; top: auto; bottom: calc(100% - var(--app-top) - var(--app-height) + var(--dock-height));
+        left: var(--safe-left); right: var(--safe-right); width: auto; padding: 0;
+        height: min(640px, calc(var(--app-height) - var(--dock-height) - var(--safe-top) - 24px));
+        max-height: none; border: 1px solid #334155; border-radius: 24px 24px 0 0;
+        transform: translateY(calc(100% + var(--dock-height))); visibility: hidden; pointer-events: none;
+        transition: transform .22s ease, visibility .22s; box-shadow: 0 -12px 48px rgba(0, 0, 0, .35);
+    }
+    body.drawer-open #sidebar { transform: translateY(0); visibility: visible; pointer-events: auto; }
+    #sidebarHeader { padding: 14px 16px; }
+    #sidebarHeader > div > div:first-child { display: none; }
+    #sidebarHeader > div > div:last-child { margin-left: 0; }
+    #sidebarHeader > div { flex: 1; }
+    #sidebarHeader p { font-size: 10px; }
+    #openCodeModalBtn { display: none; }
+    #sidebarScroll { padding: 16px 16px 24px; }
+    #sidebarScroll button { font-size: 13px; }
+    #modelListContainer { max-height: none; overflow: visible; padding-right: 0; }
+    #savedModelListContainer { max-height: 240px; }
+    #modelListContainer button { min-height: 62px; }
+    #modelListContainer button > div { flex: 1; }
+    #hudBadge { top: 12px; left: calc(12px + var(--safe-left)); right: calc(12px + var(--safe-right)); max-width: none; }
+    #hudBadge > div { padding: 10px 12px; }
+    #viewportActions { top: auto; left: calc(12px + var(--safe-left)); right: calc(12px + var(--safe-right)); bottom: 12px; gap: 6px; }
+    #viewportActions button { padding: 10px 8px; border-radius: 12px; min-width: 0; font-size: 11px; justify-content: center; }
+    #downloadStlBtn { flex: 1.2; }
+    #quickExportHtmlBtn, #resetCameraBtn { flex: 1; }
+    #viewportActions i { display: none; }
+    #touchGestureHint { bottom: 67px; left: calc(12px + var(--safe-left)); right: calc(12px + var(--safe-right)); }
+    #desktopGestureHint { display: none; }
+    #modelLoadingStatus { top: 76px; left: 12px; right: 12px; }
+    #toastBanner { bottom: calc(var(--dock-height) + 12px); left: 16px; right: 16px; max-width: none; font-size: 13px; }
+    #stlModal, #actionModal, #downloadModal { padding: calc(8px + var(--safe-top)) calc(8px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(8px + var(--safe-left)); }
+    #stlModal > div > :nth-child(2) { padding: 16px; }
+    #stlModal > div > :last-child { display: grid; grid-template-columns: auto 1fr; padding: 12px; }
+    #stlModal > div > :nth-child(2) > div:first-child { flex-direction: column; align-items: stretch; }
+    #exportStandaloneHtmlBtn { white-space: normal; justify-content: center; }
+    #customStlTextarea { min-height: 140px; }
+    #copySnippetBtn { font-size: 11px; max-width: 55%; }
+    #dependencyError { overflow: auto; }
+}
+
+/* Keep the model visible on a phone held sideways. */
+@media (max-width: 1023px) and (max-height: 540px) and (orientation: landscape) {
+    :root { --dock-height: calc(54px + var(--safe-bottom)); }
+    #mobileHeader { min-height: calc(48px + var(--safe-top)); padding-top: var(--safe-top); padding-bottom: 0; }
+    #mobileHeader span { display: none; }
+    #mobileDock { padding-top: 4px; padding-bottom: calc(4px + var(--safe-bottom)); }
+    #mobileDock button { flex-direction: row; gap: 8px; }
+    #sidebar { left: var(--safe-left); right: auto; width: min(400px, calc(100% - 32px)); height: calc(var(--app-height) - var(--dock-height) - var(--safe-top)); border-radius: 0 20px 0 0; }
+    #hudBadge { max-width: min(42%, 320px); top: 8px; }
+    #viewportActions { top: 8px; bottom: auto; left: auto; width: 310px; }
+    #touchGestureHint { bottom: 8px; }
+    #modelLoadingStatus { top: 66px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+
+#modelsSection > div:nth-child(2) > div:first-child { flex-wrap: wrap; gap: 8px; }
