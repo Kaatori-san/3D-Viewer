@@ -1,1 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe STL Studio — 29 Original Models</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js r128 + OrbitControls + STLLoader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
 
+    <link id="localViewerStyles" rel="stylesheet" href="styles.css">
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row bg-slate-950 text-slate-100 overflow-hidden">
+
+    <!-- LEFT SIDEBAR: Model Selection & Custom Controls -->
+    <aside id="sidebar" class="w-full md:w-80 lg:w-96 bg-slate-900/95 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col z-20 max-h-[45vh] md:max-h-screen shrink-0 backdrop-blur-md">
+        <!-- App Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                    <i class="fa-solid fa-cube text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-tight text-white leading-tight">Cafe STL Studio</h1>
+                    <p class="text-xs text-slate-400">29 original STL models · loads on demand</p>
+                </div>
+            </div>
+            <button id="openCodeModalBtn" class="px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-medium transition flex items-center gap-1.5" title="Embed, Paste or Export Standalone HTML">
+                <i class="fa-solid fa-code"></i>
+                <span>Embed / Export</span>
+            </button>
+        </div>
+
+        <!-- Scrollable Controls Container -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-6">
+
+            <!-- 1. Model Selector Menu & Persistent Storage -->
+            <div class="space-y-4">
+                <!-- Quick Local File Loader & Paste Buttons -->
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-xs font-semibold text-sky-300 flex items-center justify-center gap-2 transition shadow-sm">
+                        <i class="fa-solid fa-cloud-arrow-up text-sky-400"></i>
+                        <span>Upload & Save STL</span>
+                        <input type="file" id="stlFileInput" accept=".stl" multiple class="hidden">
+                    </label>
+                    <button id="pasteStlBtn" class="py-2.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-medium text-slate-200 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-paste text-indigo-400"></i>
+                        <span>Paste / Export</span>
+                    </button>
+                </div>
+
+                <!-- Saved in Browser (IndexedDB) Section -->
+                <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-database"></i>
+                            <span>Saved in Browser (IndexedDB)</span>
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <span id="idbStatsBadge" class="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full mono">0 (0 KB)</span>
+                            <button id="clearAllSavedBtn" class="hidden text-[10px] text-rose-400 hover:text-rose-300 px-1.5 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition" title="Delete all saved models from browser">
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Saved Models List -->
+                    <div id="savedModelListContainer" class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                        <!-- Populated dynamically from IndexedDB -->
+                    </div>
+                </div>
+
+                <!-- Built-in Embedded Models Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-layer-group text-sky-400"></i>
+                            Embedded STL Models
+                        </label>
+                        <span id="modelCountBadge" class="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full mono">29 Models</span>
+                    </div>
+
+                    <label for="modelSearch" class="sr-only">Search STL models</label>
+                    <input id="modelSearch" type="search" placeholder="Search by name or filename…" class="w-full mb-2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+                    <label for="modelCategory" class="sr-only">Filter model category</label>
+                    <select id="modelCategory" class="w-full mb-2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200">
+                        <option value="">All categories</option>
+                        <option>Furniture</option><option>Shelf parts</option>
+                        <option>Fixtures</option><option>Equipment</option>
+                    </select>
+                    <p class="text-[11px] text-slate-400 mb-2">Select a model below to view it. Original STL geometry is preserved.</p>
+                    <!-- Interactive Model Cards List -->
+                    <div id="modelListContainer" class="space-y-1.5 max-h-80 overflow-y-auto pr-1" role="group" aria-label="Embedded STL model menu">
+                        <!-- Populated dynamically from EMBEDDED_STL_MODELS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Material & Shading Customization -->
+            <div class="border-t border-slate-800/80 pt-5 space-y-4">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-palette text-sky-400"></i>
+                    Surface & Material
+                </label>
+
+                <!-- Color Presets & Custom Picker -->
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5" id="colorSwatches">
+                        <button data-color="#38bdf8" class="w-6 h-6 rounded-full bg-sky-400 ring-2 ring-offset-2 ring-offset-slate-900 ring-sky-400 transition transform hover:scale-110"></button>
+                        <button data-color="#f43f5e" class="w-6 h-6 rounded-full bg-rose-500 hover:scale-110 transition transform"></button>
+                        <button data-color="#10b981" class="w-6 h-6 rounded-full bg-emerald-500 hover:scale-110 transition transform"></button>
+                        <button data-color="#f59e0b" class="w-6 h-6 rounded-full bg-amber-500 hover:scale-110 transition transform"></button>
+                        <button data-color="#a855f7" class="w-6 h-6 rounded-full bg-purple-500 hover:scale-110 transition transform"></button>
+                        <button data-color="#e2e8f0" class="w-6 h-6 rounded-full bg-slate-200 hover:scale-110 transition transform"></button>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                        <input type="color" id="customColorPicker" value="#38bdf8" class="w-5 h-5 rounded cursor-pointer bg-transparent border-0">
+                        <span id="colorHexLabel" class="text-xs mono text-slate-300">#38BDF8</span>
+                    </div>
+                </div>
+
+                <!-- Metalness & Roughness Sliders -->
+                <div class="space-y-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Metalness</span>
+                            <span id="metalnessVal" class="mono text-sky-400">0.25</span>
+                        </div>
+                        <input id="metalnessSlider" type="range" min="0" max="1" step="0.05" value="0.25" class="w-full">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Roughness</span>
+                            <span id="roughnessVal" class="mono text-sky-400">0.35</span>
+                        </div>
+                        <input id="roughnessSlider" type="range" min="0" max="1" step="0.05" value="0.35" class="w-full">
+                    </div>
+                </div>
+
+                <!-- Shading & Display Toggles -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="toggleWireframeBtn" class="py-2 px-3 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/70 text-xs font-medium text-slate-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-border-all"></i>
+                        <span>Wireframe: Off</span>
+                    </button>
+                    <button id="toggleShadingBtn" class="py-2 px-3 rounded-xl bg-sky-500/15 border border-sky-500/40 text-xs font-medium text-sky-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-gem"></i>
+                        <span>Flat Shading</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Scene & Camera Options -->
+            <div class="border-t border-slate-800/80 pt-5 space-y-3">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-video text-sky-400"></i>
+                    Viewport & Helpers
+                </label>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="toggleAutoRotateBtn" class="py-2 px-3 rounded-xl bg-sky-500/15 border border-sky-500/40 text-xs font-medium text-sky-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-arrows-spin fa-spin"></i>
+                        <span>Auto-Rotate</span>
+                    </button>
+                    <button id="toggleGridBtn" class="py-2 px-3 rounded-xl bg-sky-500/15 border border-sky-500/40 text-xs font-medium text-sky-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-table-cells"></i>
+                        <span>Grid & Axes</span>
+                    </button>
+                </div>
+
+                <!-- Quick Camera Views -->
+                <div class="grid grid-cols-4 gap-1.5 pt-1">
+                    <button data-view="iso" class="cam-view-btn py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-300 transition border border-slate-700">Iso</button>
+                    <button data-view="front" class="cam-view-btn py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-300 transition border border-slate-700">Front</button>
+                    <button data-view="top" class="cam-view-btn py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-300 transition border border-slate-700">Top</button>
+                    <button data-view="side" class="cam-view-btn py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-300 transition border border-slate-700">Side</button>
+                </div>
+            </div>
+
+            <!-- 4. Geometry Telemetry -->
+            <div class="border-t border-slate-800/80 pt-5">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
+                    <i class="fa-solid fa-ruler-combined text-sky-400"></i>
+                    Model Specifications
+                </label>
+                <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/90 space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Active Model:</span>
+                        <span id="statModelName" class="font-semibold text-white">Loading…</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Triangles:</span>
+                        <span id="statTriangles" class="mono text-sky-400">—</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Vertices:</span>
+                        <span id="statVertices" class="mono text-slate-300">—</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400" title="STL stores no unit label; millimeters are assumed. Original STL axes are shown.">STL size (X×Y×Z, mm):</span>
+                        <span id="statDimensions" class="mono text-emerald-400">—</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- MAIN 3D VIEWPORT -->
+    <main id="viewportMain" class="flex-1 relative h-[55vh] md:h-screen w-full overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-black">
+        <!-- Three.js Canvas Container -->
+        <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+        <div id="modelLoadingStatus" role="status" aria-live="polite" class="hidden absolute top-20 left-4 right-4 z-30 rounded-xl bg-slate-900/95 border border-sky-500/40 text-sky-200 p-3 text-xs">Loading model…</div>
+        <div id="dependencyError" role="alert" class="hidden absolute inset-6 z-40 bg-slate-900 border border-rose-500 rounded-xl p-6 text-sm text-white">
+            The 3D viewer libraries could not load. Connect to the internet and reopen this HTML in Chrome, Edge, Firefox, or Opera. Your 29 STL models are included in the models folder; the viewer scripts and styling load from external CDNs.
+        </div>
+
+        <!-- Drag and Drop Overlay -->
+        <div id="dropOverlay" class="pointer-events-none absolute inset-0 z-40 hidden bg-sky-950/80 backdrop-blur-sm border-2 border-dashed border-sky-400 m-4 rounded-2xl flex flex-col items-center justify-center text-center p-6">
+            <div class="w-16 h-16 rounded-2xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center mb-3">
+                <i class="fa-solid fa-file-import text-sky-400 text-3xl animate-bounce"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">Drop .STL Files Anywhere to Save & View</h3>
+            <p class="text-xs text-sky-300 mt-1">Files are automatically stored in your browser's IndexedDB database and persist across refreshes.</p>
+        </div>
+
+        <!-- Floating Top-Left Model Badge -->
+        <div class="absolute top-4 left-4 pointer-events-none flex flex-col gap-1.5">
+            <div class="bg-slate-900/80 backdrop-blur-md border border-slate-700/70 rounded-xl px-3.5 py-2 shadow-xl flex items-center gap-2.5">
+                <span id="hudStorageDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <div>
+                    <div id="hudModelTitle" class="text-xs font-bold text-white">Loading embedded model…</div>
+                    <div id="hudModelDesc" class="text-[11px] text-slate-400">29 original STL files included</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Top-Right Reset Camera & Export Button -->
+        <div class="absolute top-4 right-4 flex items-center gap-2">
+            <button id="downloadStlBtn" class="bg-slate-900/85 hover:bg-slate-800 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-medium" title="Download the exact original STL file">Download STL</button>
+            <button id="quickExportHtmlBtn" class="bg-emerald-500/15 hover:bg-emerald-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 px-3 py-2 rounded-xl text-xs font-medium shadow-lg transition flex items-center gap-1.5" title="Download a single HTML file with all your IndexedDB saved models permanently embedded">
+                <i class="fa-solid fa-download"></i>
+                <span class="hidden sm:inline">Export Portable HTML</span>
+            </button>
+            <button id="resetCameraBtn" class="bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-medium shadow-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-crosshairs text-sky-400"></i>
+                <span>Reset View</span>
+            </button>
+        </div>
+
+        <!-- Floating Bottom Controls Helper -->
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none hidden sm:flex items-center gap-4 bg-slate-900/80 backdrop-blur-md border border-slate-800/90 px-4 py-2 rounded-full text-[11px] text-slate-300 shadow-xl">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-computer-mouse text-sky-400"></i> <b>Left Drag:</b> Rotate</span>
+            <span class="text-slate-600">|</span>
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrows-up-down text-sky-400"></i> <b>Scroll / Pinch:</b> Zoom</span>
+            <span class="text-slate-600">|</span>
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-hand text-sky-400"></i> <b>Right Drag:</b> Pan</span>
+        </div>
+
+        <!-- Status Toast Banner -->
+        <div id="toastBanner" class="fixed bottom-6 right-6 z-50 hidden bg-slate-900 border border-sky-500/50 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs">
+            <i class="fa-solid fa-circle-check text-sky-400 text-base"></i>
+            <span id="toastMessage">Model loaded successfully!</span>
+        </div>
+    </main>
+
+    <!-- MODAL: Paste / Embed Custom STL directly in HTML -->
+    <div id="stlModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-code text-sky-400"></i>
+                    <h2 class="font-bold text-sm text-white">Embed, Paste or Export Standalone HTML</h2>
+                </div>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white w-8 h-8 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-300">
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="text-emerald-200 leading-relaxed">
+                        <strong class="text-emerald-300 flex items-center gap-1.5"><i class="fa-solid fa-box-archive"></i> Portable Single-File HTML Exporter</strong>
+                        Save this viewer and your browser-saved models in one HTML. The 29 included STL files stay losslessly compressed. Download STL returns the original file.
+                    </div>
+                    <button id="exportStandaloneHtmlBtn" class="shrink-0 px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition flex items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-file-code"></i>
+                        <span>Export Full Standalone HTML</span>
+                    </button>
+                </div>
+
+                <div class="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3.5 text-sky-200 leading-relaxed">
+                    <strong>Automatic Browser Storage + Manual Snippet Generator:</strong><br>
+                    • Any STL added below or uploaded via the sidebar is automatically stored in <strong>IndexedDB (<code class="mono">STLViewerDB</code>)</strong> and stays saved across browser restarts.<br>
+                    • You can also copy the generated JS snippet to paste manually into <code class="mono bg-slate-950 px-1.5 py-0.5 rounded text-sky-300">EMBEDDED_STL_MODELS</code>.
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Model Name</label>
+                        <input id="customModelName" type="text" placeholder="e.g., Custom Gear V2" value="My Custom STL" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-medium">Convert Local .STL to Base64 Snippet</label>
+                        <label class="cursor-pointer w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-slate-200 flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
+                            <span>Select .STL File to Encode</span>
+                            <input type="file" id="modalFileEncoder" accept=".stl" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-slate-400 font-medium">ASCII STL Text or Base64 Data</label>
+                        <button id="copySnippetBtn" class="text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>Copy JS Snippet for HTML Code</span>
+                        </button>
+                    </div>
+                    <textarea id="customStlTextarea" rows="7" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 mono text-[11px] text-emerald-400 focus:outline-none focus:border-sky-500" placeholder="solid my_model&#10;  facet normal 0 0 1&#10;    outer loop&#10;      vertex 0 0 0&#10;      vertex 10 0 0&#10;      vertex 0 10 0&#10;    endloop&#10;  endfacet&#10;endsolid my_model"></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-end gap-2">
+                <button id="cancelModalBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">Cancel</button>
+                <button id="loadCustomStlBtn" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Save to IndexedDB & View 3D Model</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Rename or Confirm Delete Saved Model -->
+    <div id="actionModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <h3 id="actionModalTitle" class="font-bold text-sm text-white">Manage Saved Model</h3>
+                <button id="closeActionModalBtn" class="text-slate-400 hover:text-white w-7 h-7 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-3 text-xs text-slate-300">
+                <p id="actionModalMessage">Enter a new name for this saved STL model:</p>
+                <input id="actionModalInput" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-sky-500">
+            </div>
+            <div class="p-3.5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-end gap-2">
+                <button id="cancelActionModalBtn" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">Cancel</button>
+                <button id="confirmActionModalBtn" class="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- The menu below references exact original STL files stored with lossless compression in the models folder. -->
+    <script id="embeddedStlModels" type="application/json">[{"id":"cafe_model_01","name":"Live-edge dining table","filename":"Live-edge dining table.stl","category":"Furniture","description":"Furniture \u00b7 816 triangles","icon":"fa-utensils","color":"#38bdf8","format":"original-stl-lossless","byteSize":40884,"dataId":"original_cafe_model_01","sha256":"720d806dd7f9345cb2db611c19069d0ab4cd1abede9c5942506c8429a5f80df7","dataFile":"models/cafe_model_01.js"},{"id":"cafe_model_02","name":"01 Shelf frame and cubbies","filename":"01_Shelf_frame_and_cubbies.stl","category":"Shelf parts","description":"Shelf parts \u00b7 2,468 triangles","icon":"fa-border-all","color":"#38bdf8","format":"original-stl-lossless","byteSize":123484,"dataId":"original_cafe_model_02","sha256":"32ead4a8737efc6c5bde6bf709878cc8aabb93c933de85036ef6f9adcd2072af","dataFile":"models/cafe_model_02.js"},{"id":"cafe_model_03","name":"02 Books top left","filename":"02_Books_top_left.stl","category":"Shelf parts","description":"Shelf parts \u00b7 28 triangles","icon":"fa-book","color":"#38bdf8","format":"original-stl-lossless","byteSize":1484,"dataId":"original_cafe_model_03","sha256":"ff9b7456d70b9872036ad6483b558c72ca5b351f19774f6e13956f84c8f33d58","dataFile":"models/cafe_model_03.js"},{"id":"cafe_model_04","name":"03 Books top middle","filename":"03_Books_top_middle.stl","category":"Shelf parts","description":"Shelf parts \u00b7 44 triangles","icon":"fa-book","color":"#38bdf8","format":"original-stl-lossless","byteSize":2284,"dataId":"original_cafe_model_04","sha256":"851429348c5504f89affa349aa609d21d50c84b08910d470eca2217eb03de201","dataFile":"models/cafe_model_04.js"},{"id":"cafe_model_05","name":"04 Books right V","filename":"04_Books_right_V.stl","category":"Shelf parts","description":"Shelf parts \u00b7 68 triangles","icon":"fa-book","color":"#38bdf8","format":"original-stl-lossless","byteSize":3484,"dataId":"original_cafe_model_05","sha256":"5095039a522ebe6ab55f7b2de918b2a920bccf3246fca413eb60eed9ce3cf62c","dataFile":"models/cafe_model_05.js"},{"id":"cafe_model_06","name":"05 Trailing plant top","filename":"05_Trailing_plant_top.stl","category":"Shelf parts","description":"Shelf parts \u00b7 9,802 triangles","icon":"fa-leaf","color":"#38bdf8","format":"original-stl-lossless","byteSize":490184,"dataId":"original_cafe_model_06","sha256":"444d5211fb0e7c72ccdd31011d98f5800df3e0762aa5ef4bc2f966975f31eda8","dataFile":"models/cafe_model_06.js"},{"id":"cafe_model_07","name":"06 Trailing plant left","filename":"06_Trailing_plant_left.stl","category":"Shelf parts","description":"Shelf parts \u00b7 9,802 triangles","icon":"fa-leaf","color":"#38bdf8","format":"original-stl-lossless","byteSize":490184,"dataId":"original_cafe_model_07","sha256":"3d84cd3816c189bc12618f6df7d370f8b3c2aa4bd2870294c08628681a4cbd11","dataFile":"models/cafe_model_07.js"},{"id":"cafe_model_08","name":"07 Upright plant left","filename":"07_Upright_plant_left.stl","category":"Shelf parts","description":"Shelf parts \u00b7 9,956 triangles","icon":"fa-seedling","color":"#38bdf8","format":"original-stl-lossless","byteSize":497884,"dataId":"original_cafe_model_08","sha256":"3367ff3e4c6a87afc57bbebdcc5dac2e8905b751f58f17842b957aecc43fc8bb","dataFile":"models/cafe_model_08.js"},{"id":"cafe_model_09","name":"08 Upright plant right","filename":"08_Upright_plant_right.stl","category":"Shelf parts","description":"Shelf parts \u00b7 7,774 triangles","icon":"fa-seedling","color":"#38bdf8","format":"original-stl-lossless","byteSize":388784,"dataId":"original_cafe_model_09","sha256":"9e377ffc2770c837b871d26b8aad21c655eed5a6e9314b681fc992dcca498df8","dataFile":"models/cafe_model_09.js"},{"id":"cafe_model_10","name":"Chair","filename":"Chair.stl","category":"Furniture","description":"Furniture \u00b7 78,262 triangles","icon":"fa-chair","color":"#38bdf8","format":"original-stl-lossless","byteSize":3913184,"dataId":"original_cafe_model_10","sha256":"943b15c0857b03e5fe01df8c31ec1eee9772b01bf0f8d3e09cba723e52e518b5","dataFile":"models/cafe_model_10.js"},{"id":"cafe_model_11","name":"Console table","filename":"Console table.stl","category":"Furniture","description":"Furniture \u00b7 31,780 triangles","icon":"fa-table","color":"#38bdf8","format":"original-stl-lossless","byteSize":1589084,"dataId":"original_cafe_model_11","sha256":"0c1b4cff5a4c11e3f0a902a53bc828ca879b5712308d510f71c85d8aefc0d6a2","dataFile":"models/cafe_model_11.js"},{"id":"cafe_model_12","name":"Curved-back chair 1","filename":"Curved-back chair 1.stl","category":"Furniture","description":"Furniture \u00b7 27,150 triangles","icon":"fa-chair","color":"#38bdf8","format":"original-stl-lossless","byteSize":1357584,"dataId":"original_cafe_model_12","sha256":"9c137b9d30efbbae5f8f973511abb553adaf6be26b1fbc12a4654c933da9541c","dataFile":"models/cafe_model_12.js"},{"id":"cafe_model_13","name":"Double sink","filename":"Double sink.stl","category":"Fixtures","description":"Fixtures \u00b7 12,752 triangles","icon":"fa-sink","color":"#38bdf8","format":"original-stl-lossless","byteSize":637684,"dataId":"original_cafe_model_13","sha256":"2f44bbfa7e0d42af621a9a0fd54f9b3a872ae347dcb937a87c3b83a2a4a8b34d","dataFile":"models/cafe_model_13.js"},{"id":"cafe_model_14","name":"Double Cafe Door","filename":"Double_Cafe_Door.stl","category":"Fixtures","description":"Fixtures \u00b7 85,052 triangles","icon":"fa-door-open","color":"#38bdf8","format":"original-stl-lossless","byteSize":4252684,"dataId":"original_cafe_model_14","sha256":"7df7a7cc701c7f2d67a80bd823399073c51d1966a0440c754d8657ba9c94f2d8","dataFile":"models/cafe_model_14.js"},{"id":"cafe_model_15","name":"Espresso machine","filename":"Espresso machine.stl","category":"Equipment","description":"Equipment \u00b7 85,582 triangles","icon":"fa-mug-hot","color":"#38bdf8","format":"original-stl-lossless","byteSize":4279184,"dataId":"original_cafe_model_15","sha256":"4843b13f4ceed8638bf89cf906e9d1e2db03d061af18be00b8d293212a3e4998","dataFile":"models/cafe_model_15.js"},{"id":"cafe_model_16","name":"Framed vanity","filename":"Framed vanity.stl","category":"Fixtures","description":"Fixtures \u00b7 58,192 triangles","icon":"fa-border-all","color":"#38bdf8","format":"original-stl-lossless","byteSize":2909684,"dataId":"original_cafe_model_16","sha256":"a98555663a47d71c98e2068939f3db84bec1b376e80d19c1207df4db4773acdc","dataFile":"models/cafe_model_16.js"},{"id":"cafe_model_17","name":"fridge","filename":"fridge.stl.stl","category":"Equipment","description":"Equipment \u00b7 9,844 triangles","icon":"fa-snowflake","color":"#38bdf8","format":"original-stl-lossless","byteSize":492284,"dataId":"original_cafe_model_17","sha256":"0527d90e9494482e70cc066fc5900e651d1ad10b80a4e8cc28b8a3c9c3ad3e59","dataFile":"models/cafe_model_17.js"},{"id":"cafe_model_18","name":"Grand piano","filename":"Grand piano.stl","category":"Furniture","description":"Furniture \u00b7 354,470 triangles","icon":"fa-music","color":"#38bdf8","format":"original-stl-lossless","byteSize":17723584,"dataId":"original_cafe_model_18","sha256":"1393327fd6fe36fbf0545bf8c1bafabb9ea61cd5ae5b12ce6d7880ffc5898bff","dataFile":"models/cafe_model_18.js"},{"id":"cafe_model_19","name":"Industrial armchair 4","filename":"Industrial armchair 4.stl","category":"Furniture","description":"Furniture \u00b7 41,856 triangles","icon":"fa-chair","color":"#38bdf8","format":"original-stl-lossless","byteSize":2092884,"dataId":"original_cafe_model_19","sha256":"da7dbaf81402f1cd95a0c5fa7aaa6c81726a958caa28390c599de0b0a52e8e69","dataFile":"models/cafe_model_19.js"},{"id":"cafe_model_20","name":"L Bar Counter + Double Sink","filename":"L Bar Counter + Double Sink.stl","category":"Fixtures","description":"Fixtures \u00b7 103,860 triangles","icon":"fa-sink","color":"#38bdf8","format":"original-stl-lossless","byteSize":5193084,"dataId":"original_cafe_model_20","sha256":"5ea9213ee46bb4d4c6d996f6063dbdc9cdb1259c9a648c8dba7c5bc9adbe22ce","dataFile":"models/cafe_model_20.js"},{"id":"cafe_model_21","name":"Opposite L - L Bar Counter + Double Sink","filename":"Opposite L - L Bar Counter + Double Sink.stl","category":"Fixtures","description":"Fixtures \u00b7 103,860 triangles","icon":"fa-sink","color":"#38bdf8","format":"original-stl-lossless","byteSize":5193084,"dataId":"original_cafe_model_21","sha256":"82410c94652c8984f3f39c6e95158685f2262ea81d9af79cb01dc6a9d573fd83","dataFile":"models/cafe_model_21.js"},{"id":"cafe_model_22","name":"Pastry display counter fixed","filename":"Pastry_display_counter fixed.stl.stl.stl.stl","category":"Equipment","description":"Equipment \u00b7 59,096 triangles","icon":"fa-store","color":"#38bdf8","format":"original-stl-lossless","byteSize":2954884,"dataId":"original_cafe_model_22","sha256":"d4b3de9511ffc857a42480f95f02b8d2f059a0d878c5aa9668ab77148d370afa","dataFile":"models/cafe_model_22.js"},{"id":"cafe_model_23","name":"Piano bench","filename":"Piano bench.stl","category":"Furniture","description":"Furniture \u00b7 32,012 triangles","icon":"fa-chair","color":"#38bdf8","format":"original-stl-lossless","byteSize":1600684,"dataId":"original_cafe_model_23","sha256":"bea84e9821ffa36f6b3c3ad30ce71196991f8954b3bf02020cf8542fb010e558","dataFile":"models/cafe_model_23.js"},{"id":"cafe_model_24","name":"Single Cafe Door","filename":"Single_Cafe_Door.stl","category":"Fixtures","description":"Fixtures \u00b7 47,624 triangles","icon":"fa-door-open","color":"#38bdf8","format":"original-stl-lossless","byteSize":2381284,"dataId":"original_cafe_model_24","sha256":"2e80a67ae7298e99047aa73eb2cf5150da75d798a949110ae2136489c66e24f3","dataFile":"models/cafe_model_24.js"},{"id":"cafe_model_25","name":"Table","filename":"Table.stl","category":"Furniture","description":"Furniture \u00b7 153,088 triangles","icon":"fa-table","color":"#38bdf8","format":"original-stl-lossless","byteSize":7654484,"dataId":"original_cafe_model_25","sha256":"085f8893f8d5b39f42d4ae34d432b7b188214a1bcf5e4fac991c74cce7ab9390","dataFile":"models/cafe_model_25.js"},{"id":"cafe_model_26","name":"Toilet","filename":"Toilet.stl","category":"Fixtures","description":"Fixtures \u00b7 44,752 triangles","icon":"fa-toilet","color":"#38bdf8","format":"original-stl-lossless","byteSize":2237684,"dataId":"original_cafe_model_26","sha256":"b63583fa1ffb444687152912619fdca8ec7a615a808c61939767bf6327aa83de","dataFile":"models/cafe_model_26.js"},{"id":"cafe_model_27","name":"Urinal","filename":"Urinal.stl","category":"Fixtures","description":"Fixtures \u00b7 14,312 triangles","icon":"fa-restroom","color":"#38bdf8","format":"original-stl-lossless","byteSize":715684,"dataId":"original_cafe_model_27","sha256":"4dc40dfde1e950fa349071ce4b8942efb3f7ecccbe16620386c30e62306d5441","dataFile":"models/cafe_model_27.js"},{"id":"cafe_model_28","name":"White Round Table","filename":"White Round Table.stl","category":"Furniture","description":"Furniture \u00b7 3,590 triangles","icon":"fa-table","color":"#38bdf8","format":"original-stl-lossless","byteSize":179584,"dataId":"original_cafe_model_28","sha256":"b3af2772236a999ed6ac7898fcf9c32a3c7d0a8c00fa86150de0fabd8e53c800","dataFile":"models/cafe_model_28.js"},{"id":"cafe_model_29","name":"Wooden vanity","filename":"Wooden vanity.stl","category":"Fixtures","description":"Fixtures \u00b7 28,490 triangles","icon":"fa-border-all","color":"#38bdf8","format":"original-stl-lossless","byteSize":1424584,"dataId":"original_cafe_model_29","sha256":"b6c4df9d75d5caacec6aad230256b13edd53db796fb6743596b3efaf3ce87c2a","dataFile":"models/cafe_model_29.js"}]</script>
+    <script id="viewerBootstrap" src="viewer.js"></script>
+</body>
+</html>
